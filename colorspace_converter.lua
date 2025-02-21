@@ -1,4 +1,4 @@
--- Script by ChrisFurry, version 1.3
+-- Script by ChrisFurry, version 1.4
 -- Discord: chrisfurry
 
 if app.apiVersion < 1 then
@@ -48,6 +48,22 @@ local fix_color = {
 		for i,col in pairs(color) do
 			col = col >> 5
 			col = col << 5
+			color[i] = col
+		end
+		return color
+	end;
+	["9-Bit (Rendered, Sonic 3 Air)"] = function(r,g,b)
+		local color = {
+			r=r,
+			g=g,
+			b=b
+		}
+		for i,col in pairs(color) do
+			col = col >> 5
+			col = col * 0x24
+			-- yes i just remove one line of code lol
+			-- i dont know how to make dynamic options yet so this is the best you get.
+			--if(col >= 0xFC)then col = 0xFF end
 			color[i] = col
 		end
 		return color
@@ -146,6 +162,7 @@ local dee = Dialog("ColorSpace Converter"):combobox{id="type",label="Type",
 	option="Mania",options={
 	"15-Bit (SNES, 32X, Sonic Mania)",
 	"9-Bit (Retro Engine ColorSpace)",
+	"9-Bit (Rendered, Sonic 3 Air)",
 	"9-Bit (Sega Geneis)",
 	"6-Bit (Master System)",
 	"3-Bit"}}
