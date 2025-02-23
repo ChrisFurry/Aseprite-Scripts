@@ -1,4 +1,4 @@
--- Script by ChrisFurry, version 1.4
+-- Script by ChrisFurry, version 1.5
 -- Discord: chrisfurry
 
 if app.apiVersion < 1 then
@@ -14,6 +14,7 @@ end
 ---@param r number From 0-255
 ---@param g number From 0-255
 ---@param b number From 0-255
+---@param e string Modifier
 ---@return table{r,g,b}
 local fix_color = {
 	["15-Bit (SNES, 32X, Sonic Mania)"] = function(r,g,b)
@@ -39,7 +40,7 @@ local fix_color = {
 		end
 		return color
 	end;
-	["9-Bit (Retro Engine ColorSpace)"] = function(r,g,b)
+	["9-Bit (Sega Geneis)"] = function(r,g,b,e)
 		local color = {
 			r=r,
 			g=g,
@@ -47,37 +48,12 @@ local fix_color = {
 		}
 		for i,col in pairs(color) do
 			col = col >> 5
-			col = col << 5
-			color[i] = col
-		end
-		return color
-	end;
-	["9-Bit (Rendered, Sonic 3 Air)"] = function(r,g,b)
-		local color = {
-			r=r,
-			g=g,
-			b=b
-		}
-		for i,col in pairs(color) do
-			col = col >> 5
-			col = col * 0x24
-			-- yes i just remove one line of code lol
-			-- i dont know how to make dynamic options yet so this is the best you get.
-			--if(col >= 0xFC)then col = 0xFF end
-			color[i] = col
-		end
-		return color
-	end;
-	["9-Bit (Sega Geneis)"] = function(r,g,b)
-		local color = {
-			r=r,
-			g=g,
-			b=b
-		}
-		for i,col in pairs(color) do
-			col = col >> 5
-			col = col * 0x24
-			if(col >= 0xFC)then col = 0xFF end
+			if(e == "Retro Engine")then
+				col = col << 5
+			else
+				col = col * 0x24
+				if(col >= 0xFC and e == "Default")then col = 0xFF end
+			end
 			color[i] = col
 		end
 		return color
@@ -106,11 +82,11 @@ local fix_color = {
 	end;
 }
 -- Execution
-local function execute_script(type,game,ignore_idx0)
+local function execute_script(type,game,extra,ignore_idx0)
 	-- Setup
 	local cel,img,spr,shiftamm
 	if(type == "Image")then
-		cel = app.activeCel
+		cel = app.cel
 		if(not cel)then
 			return app.alert("There is no active image!")
 		end
@@ -120,7 +96,7 @@ local function execute_script(type,game,ignore_idx0)
 		end
 	else
 		trans_string = "Palette"
-		spr = app.activeSprite
+		spr = app.sprite
 		if(not spr)then
 			return app.alert("There is no active image!")
 		end
@@ -134,7 +110,7 @@ local function execute_script(type,game,ignore_idx0)
 			local rgbaA = app.pixelColor.rgbaA
 			for it in img:pixels() do
 				local pixelValue = it()
-				local color = fix_color[game](app.pixelColor.rgbaR(pixelValue),app.pixelColor.rgbaG(pixelValue),app.pixelColor.rgbaB(pixelValue))
+				local color = fix_color[game](app.pixelColor.rgbaR(pixelValue),app.pixelColor.rgbaG(pixelValue),app.pixelColor.rgbaB(pixelValue),extra)
 
 				it(rgba(color.r,
 						color.g,
@@ -147,7 +123,7 @@ local function execute_script(type,game,ignore_idx0)
 			local pal = spr.palettes[1]
 			for i = ignore_idx0 and 1 or 0,#pal-1 do
 				local slotcolor = pal:getColor(i)
-				local color = fix_color[game](slotcolor.red,slotcolor.green,slotcolor.blue)
+				local color = fix_color[game](slotcolor.red,slotcolor.green,slotcolor.blue,extra)
 				
 				pal:setColor(i,Color(color))
 			end
@@ -155,28 +131,39 @@ local function execute_script(type,game,ignore_idx0)
 	end)
 end
 
-local dee = Dialog("ColorSpace Converter"):combobox{id="type",label="Type",
+local dee
+
+local function on_game_change()
+	local new_list = {"Default"}
+	if(dee.data.game == "9-Bit (Sega Geneis)")then
+		new_list = {"Default","Rendered","Retro Engine"}
+	end
+	dee:modify{id="extra",option="Default",options=new_list}
+end
+
+dee = Dialog("ColorSpace Converter"):combobox{id="type",label="Type",
 	option="Image",options={
 		"Image","Palette"}}
 :combobox{id="game",label="Game",
 	option="Mania",options={
 	"15-Bit (SNES, 32X, Sonic Mania)",
-	"9-Bit (Retro Engine ColorSpace)",
-	"9-Bit (Rendered, Sonic 3 Air)",
 	"9-Bit (Sega Geneis)",
 	"6-Bit (Master System)",
-	"3-Bit"}}
+	"3-Bit"},onchange=on_game_change}
+:combobox{id="extra",label="Modifier",option="Default",options={"Default"}}
 :check{id="idx0",label="Ignore Index 0",selected=true}
 -- Final 3 buttons
 dee:button{id="executeandclose", text="Done",onclick=function()
-	execute_script(dee.data.type,dee.data.game,dee.data.idx0)
+	execute_script(dee.data.type,dee.data.game,dee.data.extra,dee.data.idx0)
 	dee:close()
 end}
 :button{id="execute", text="Apply",onclick=function()
-	execute_script(dee.data.type,dee.data.game,dee.data.idx0)
+	execute_script(dee.data.type,dee.data.game,dee.data.extra,dee.data.idx0)
 end}
 :button{id="cancel", text="Cancel",onclick=function()
 	dee:close()
 end}
+
+on_game_change()
 
 dee:show()
