@@ -1,5 +1,11 @@
--- Script by ChrisFurry, version 1.5
+-- Script by ChrisFurry, version 1.6
 -- Discord: chrisfurry
+-- Revolt: ChrisFurry#1081
+-- Im stupid and i should have added credits, sorry normally im good about this stuff.
+--[[ CREDITS
+Partially based on "Palette Police" object from Sonic Mania Addendum, made by LittlePlanetCD and KiaraGale.
+Ported from Sonic 1 Forever (Originally by ElspethThePict)
+]]--
 
 if app.apiVersion < 1 then
 	return app.alert("This script requires version v1.2.10-beta3 or greater")
@@ -17,7 +23,7 @@ end
 ---@param e string Modifier
 ---@return table{r,g,b}
 local fix_color = {
-	["15-Bit (SNES, 32X, Sonic Mania)"] = function(r,g,b)
+	["15-Bit"] = function(r,g,b)
 		local color = {
 			r=r,
 			g=g,
@@ -40,7 +46,20 @@ local fix_color = {
 		end
 		return color
 	end;
-	["9-Bit (Sega Geneis)"] = function(r,g,b,e)
+	["12-Bit"] = function(r,g,b)
+		local color = {
+			r=r,
+			g=g,
+			b=b
+		}
+		for i,col in pairs(color) do
+			col = col >> 4
+			col = col << 4
+			color[i] = col
+		end
+		return color
+	end;
+	["9-Bit"] = function(r,g,b,e)
 		local color = {
 			r=r,
 			g=g,
@@ -58,7 +77,7 @@ local fix_color = {
 		end
 		return color
 	end;
-	["6-Bit (Master System)"] = function(r,g,b)
+	["6-Bit"] = function(r,g,b)
 		local color = {
 			r=r,
 			g=g,
@@ -131,29 +150,43 @@ local function execute_script(type,game,extra,ignore_idx0)
 	end)
 end
 
-local dee
+local dee,consoleSupport
+
+-- List defining all of the supported consoles/games
+consoleSupport = {
+	["15-Bit"]	= "SNES, GBC, GBA, DS, Neo Geo AES/CD, Sega 32x, PSX (Textures), Sonic Mania",
+	["12-Bit"]	= "Game Gear, Neo Geo Pocket Color (There are many more I didn't list)",
+	["9-Bit"]	= "Sega Genesis/Mega Drive, Sega Pico",
+	["6-Bit"]	= "Master System, EGA for IBM PC/AT (Already a palette but why not)",
+	["3-Bit"]	= "Text Terminals",
+	["1-Bit"]	= "Half-Bit"
+}
 
 local function on_game_change()
 	local new_list = {"Default"}
-	if(dee.data.game == "9-Bit (Sega Geneis)")then
+	if(dee.data.game == "9-Bit")then
 		new_list = {"Default","Rendered","Retro Engine"}
 	end
+	dee:modify{id="support",text=consoleSupport[dee.data.game]}
 	dee:modify{id="extra",option="Default",options=new_list}
 end
 
 dee = Dialog("ColorSpace Converter"):combobox{id="type",label="Type",
 	option="Image",options={
 		"Image","Palette"}}
+:label{id="support",label="Console/Game Support: ",text="haha you wont see this unless you're looking for it :3"}
 :combobox{id="game",label="Game",
-	option="Mania",options={
-	"15-Bit (SNES, 32X, Sonic Mania)",
-	"9-Bit (Sega Geneis)",
-	"6-Bit (Master System)",
+	option="15-Bit",options={
+	"15-Bit",
+	"12-Bit",
+	"9-Bit",
+	"6-Bit",
 	"3-Bit"},onchange=on_game_change}
 :combobox{id="extra",label="Modifier",option="Default",options={"Default"}}
 :check{id="idx0",label="Ignore Index 0",selected=true}
+:separator{id="nah"}
 -- Final 3 buttons
-dee:button{id="executeandclose", text="Done",onclick=function()
+:button{id="executeandclose", text="Done",onclick=function()
 	execute_script(dee.data.type,dee.data.game,dee.data.extra,dee.data.idx0)
 	dee:close()
 end}
