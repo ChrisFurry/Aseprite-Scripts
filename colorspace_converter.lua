@@ -1,6 +1,7 @@
--- Script by ChrisFurry, version 1.6
+-- Script by ChrisFurry, version 1.7
+-- What's new: 9-bit Digitizer, Save config.
 -- Discord: chrisfurry
--- Revolt: ChrisFurry#1081
+-- Revolt/Stoat: ChrisFurry#1081
 -- Im stupid and i should have added credits, sorry normally im good about this stuff.
 --[[ CREDITS
 Partially based on "Palette Police" object from Sonic Mania Addendum, made by LittlePlanetCD and KiaraGale.
@@ -35,12 +36,10 @@ local fix_color = {
 				col = col + (8 - col % 8)
 				if(col > 0xFF)then
 					col = 255 
-					col = col >> 3
-					col = col << 3
+					col = col >> 3 << 3
 				end
 			else
-				col = col >> 3
-				col = col << 3
+				col = col >> 3 << 3
 			end
 			color[i] = col
 		end
@@ -53,8 +52,7 @@ local fix_color = {
 			b=b
 		}
 		for i,col in pairs(color) do
-			col = col >> 4
-			col = col << 4
+			col = col >> 4 << 4
 			color[i] = col
 		end
 		return color
@@ -66,12 +64,16 @@ local fix_color = {
 			b=b
 		}
 		for i,col in pairs(color) do
-			col = col >> 5
-			if(e == "Retro Engine")then
-				col = col << 5
+			if(e == "Digitizer")then
+				col = (math.floor(col>>5)<<5)*1.0625
 			else
-				col = col * 0x24
-				if(col >= 0xFC and e == "Default")then col = 0xFF end
+				col = col >> 5
+				if(e == "Retro Engine")then
+					col = col << 5
+				else
+					col = col * 0x24
+					if(col >= 0xFC and e ~= "Rendered")then col = 0xFF end
+				end
 			end
 			color[i] = col
 		end
@@ -150,7 +152,24 @@ local function execute_script(type,game,extra,ignore_idx0)
 	end)
 end
 
-local dee,consoleSupport
+local dee,consoleSupport,configPath,configExists
+
+configPath = app.fs.joinPath(app.fs.userConfigPath,"scripts",".conf_chrisfurry","colorspace_converter.json")
+configExists = app.fs.isFile(configPath)
+
+
+local function save_config()
+	app.fs.makeAllDirectories(app.fs.filePath(configPath))
+	local config = io.open(configPath,"w")
+	if(config)then
+		config:write(json.encode({
+			last_colorspace = dee.data.game,
+			last_zeroindex = dee.data.idx0,
+			last_modifier = dee.data.extra
+		}))
+		config:close()
+	end
+end
 
 -- List defining all of the supported consoles/games
 consoleSupport = {
@@ -165,7 +184,7 @@ consoleSupport = {
 local function on_game_change()
 	local new_list = {"Default"}
 	if(dee.data.game == "9-Bit")then
-		new_list = {"Default","Rendered","Retro Engine"}
+		new_list = {"Default","Rendered","Digitizer","Retro Engine"}
 	end
 	dee:modify{id="support",text=consoleSupport[dee.data.game]}
 	dee:modify{id="extra",option="Default",options=new_list}
@@ -184,6 +203,7 @@ dee = Dialog("ColorSpace Converter"):combobox{id="type",label="Type",
 	"3-Bit"},onchange=on_game_change}
 :combobox{id="extra",label="Modifier",option="Default",options={"Default"}}
 :check{id="idx0",label="Ignore Index 0",selected=true}
+:button{id="saveconf",text="Save Config",onclick=save_config}
 :separator{id="nah"}
 -- Final 3 buttons
 :button{id="executeandclose", text="Done",onclick=function()
@@ -198,5 +218,19 @@ end}
 end}
 
 on_game_change()
+
+-- Set options if config exists.
+if(configExists)then
+	local config = io.open(configPath,"r")
+	if(config)then
+		local data = json.decode(config:read("a"))
+		config:close()
+
+		if(data.last_colorspace)then	dee:modify{id="game",option=data.last_colorspace} end
+		if(data.last_zeroindex)then		dee:modify{id="idx0",selected=data.last_zeroindex} end
+		on_game_change()
+		if(data.last_modifier)then		dee:modify{id="extra",option=data.last_modifier} end
+	end
+end
 
 dee:show()

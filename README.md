@@ -1,6 +1,7 @@
 # ChrisFurry's Aseprite Scripts
 * ColorSpace Converter
 	- Does what the name says. Converts an Image or a Palette to one listed below.
+	- Ability to save the default to whatever you please.
 	- Supports: (Check [this wikipedia article](https://en.wikipedia.org/wiki/List_of_monochrome_and_RGB_color_formats) for the list of consoles.)
 		- 15-Bit
 		- 12-Bit
