@@ -65,7 +65,7 @@ local fix_color = {
 		}
 		for i,col in pairs(color) do
 			if(e == "Digitizer")then
-				col = (math.floor(col>>5)<<5)*1.0625
+				col = (col >> 5 << 5) * 1.0625
 			else
 				col = col >> 5
 				if(e == "Retro Engine")then
