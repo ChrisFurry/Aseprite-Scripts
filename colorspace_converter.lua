@@ -1,4 +1,4 @@
--- Script by ChrisFurry, version 1.7
+-- Script by ChrisFurry, version 2
 -- What's new: 9-bit Digitizer, Save config.
 -- Discord: chrisfurry
 -- Revolt/Stoat: ChrisFurry#1081
@@ -8,7 +8,7 @@ Partially based on "Palette Police" object from Sonic Mania Addendum, made by Li
 Ported from Sonic 1 Forever (Originally by ElspethThePict)
 ]]--
 
-if app.apiVersion < 1 then
+if app.apiVersion < 20 then
 	return app.alert("This script requires version v1.2.10-beta3 or greater")
 end
 
@@ -102,44 +102,47 @@ local fix_color = {
 		return color
 	end;
 }
+
+local function convert_image(img,game,extra)
+	local rgba = app.pixelColor.rgba
+	local rgbaA = app.pixelColor.rgbaA
+	for it in img:pixels() do
+		local pixelValue = it()
+		local color = fix_color[game](app.pixelColor.rgbaR(pixelValue),app.pixelColor.rgbaG(pixelValue),app.pixelColor.rgbaB(pixelValue),extra)
+
+		it(rgba(color.r,
+				color.g,
+				color.b, rgbaA(it())))
+	end
+	return img
+end
+
 -- Execution
 local function execute_script(type,game,extra,ignore_idx0)
-	-- Setup
-	local cel,img,spr,shiftamm
-	if(type == "Image")then
-		cel = app.cel
-		if(not cel)then
-			return app.alert("There is no active image!")
-		end
-		img = cel.image:clone()
-		if(img.colorMode ~= ColorMode.RGB)then
-			return app.alert("Image must be in RGB mode! For palettes, use the palette script!")
-		end
-	else
-		trans_string = "Palette"
-		spr = app.sprite
-		if(not spr)then
-			return app.alert("There is no active image!")
-		end
+	-- No image is active, therefore nothing can be done.
+	if(not app.sprite)then
+		return app.alert("There is no active image!")
 	end
 	trans_string = type.." to "..game.." Colorspace"
 	-- Transaction
 	app.transaction(trans_string,
 	function()
-		if(type == "Image")then
-			local rgba = app.pixelColor.rgba
-			local rgbaA = app.pixelColor.rgbaA
-			for it in img:pixels() do
-				local pixelValue = it()
-				local color = fix_color[game](app.pixelColor.rgbaR(pixelValue),app.pixelColor.rgbaG(pixelValue),app.pixelColor.rgbaB(pixelValue),extra)
-
-				it(rgba(color.r,
-						color.g,
-						color.b, rgbaA(it())))
+		local sprite = app.sprite
+		-- Converts the entire active file.
+		if(type == "Active File")then
+			for i,cel in ipairs(sprite.cels) do
+				if(cel.layer.isEditable and not cel.layer.isReference)then
+					cel.image = convert_image(cel.image:clone(),game,extra)
+				end
 			end
-			cel.image = img
-
-			app.refresh()
+		-- Converts the current selection
+		elseif(type == "Active Selection")then
+			for i,cel in ipairs(app.range.cels) do
+				if(cel.layer.isEditable and not cel.layer.isReference)then
+					cel.image = convert_image(cel.image:clone(),game,extra)
+				end
+			end
+		-- Converts the current palette. If aseprite does add support for multiple palettes i will
 		else
 			local pal = spr.palettes[1]
 			for i = ignore_idx0 and 1 or 0,#pal-1 do
@@ -149,6 +152,8 @@ local function execute_script(type,game,extra,ignore_idx0)
 				pal:setColor(i,Color(color))
 			end
 		end
+
+		app.refresh()
 	end)
 end
 
@@ -165,7 +170,8 @@ local function save_config()
 		config:write(json.encode({
 			last_colorspace = dee.data.game,
 			last_zeroindex = dee.data.idx0,
-			last_modifier = dee.data.extra
+			last_modifier = dee.data.extra,
+			last_type = dee.data.type
 		}))
 		config:close()
 	end
@@ -191,8 +197,10 @@ local function on_game_change()
 end
 
 dee = Dialog("ColorSpace Converter"):combobox{id="type",label="Type",
-	option="Image",options={
-		"Image","Palette"}}
+	option="Active Selection",options={
+		"Active File",
+		"Active Selection",
+		"Active Palette"}}
 :label{id="support",label="Console/Game Support: ",text="haha you wont see this unless you're looking for it :3"}
 :combobox{id="game",label="Game",
 	option="15-Bit",options={
@@ -226,6 +234,7 @@ if(configExists)then
 		local data = json.decode(config:read("a"))
 		config:close()
 
+		if(data.last_type)then			dee:modify{id="type",option=data.last_type} end
 		if(data.last_colorspace)then	dee:modify{id="game",option=data.last_colorspace} end
 		if(data.last_zeroindex)then		dee:modify{id="idx0",selected=data.last_zeroindex} end
 		on_game_change()

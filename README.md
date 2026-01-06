@@ -8,9 +8,7 @@
 		- 9-Bit
 		- 6-Bit
 		- 3-Bit
-	- Currently Doesn't Support, but want to plan for in the future.
-		- Multiple cels/layers/frames (only converts the current cel)
-		- Ability to convert the entire active file.
+	- Can convert selected cels, or an entire file.
 
 ## Credits
 The "ColorSpace Converter" script has code based on Sonic Mania Addendum's "Palette Police" Object, made by LittlePlanetCD and KiaraGale, which was ported from Sonic 1 Forever (Originally by ElspethThePict).
