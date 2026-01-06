@@ -144,7 +144,7 @@ local function execute_script(type,game,extra,ignore_idx0)
 			end
 		-- Converts the current palette. If aseprite does add support for multiple palettes i will
 		else
-			local pal = spr.palettes[1]
+			local pal = sprite.palettes[1]
 			for i = ignore_idx0 and 1 or 0,#pal-1 do
 				local slotcolor = pal:getColor(i)
 				local color = fix_color[game](slotcolor.red,slotcolor.green,slotcolor.blue,extra)
